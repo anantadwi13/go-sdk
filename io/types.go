@@ -25,6 +25,7 @@ type BufferReadSeekCloser interface {
 	io.Reader
 	io.Seeker
 	io.Closer
+	// DisableSeeker will disable the seeker function and release the underlying buffers
 	DisableSeeker()
 }
 

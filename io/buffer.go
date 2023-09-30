@@ -77,12 +77,17 @@ func (b *bufferReadSeekCloserFactory) BufferSize() int {
 type bufReadSeeker struct {
 	mu               sync.Mutex
 	isSeekerDisabled int32
+	isClosed         int32
 	currentPos       int64
 
 	readSeeker io.ReadSeeker
 }
 
 func (b *bufReadSeeker) Read(p []byte) (n int, err error) {
+	if atomic.LoadInt32(&b.isClosed) == 1 {
+		return 0, ErrClosed
+	}
+
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -92,6 +97,9 @@ func (b *bufReadSeeker) Read(p []byte) (n int, err error) {
 }
 
 func (b *bufReadSeeker) Seek(offset int64, whence int) (int64, error) {
+	if atomic.LoadInt32(&b.isClosed) == 1 {
+		return b.currentPos, ErrClosed
+	}
 	if atomic.LoadInt32(&b.isSeekerDisabled) == 1 {
 		return b.currentPos, ErrSeekerDisabled
 	}
@@ -108,6 +116,10 @@ func (b *bufReadSeeker) Seek(offset int64, whence int) (int64, error) {
 }
 
 func (b *bufReadSeeker) Close() error {
+	if !atomic.CompareAndSwapInt32(&b.isClosed, 0, 1) {
+		return ErrClosed
+	}
+
 	switch rs := b.readSeeker.(type) {
 	case io.Closer:
 		return rs.Close()
@@ -117,6 +129,9 @@ func (b *bufReadSeeker) Close() error {
 }
 
 func (b *bufReadSeeker) DisableSeeker() {
+	if atomic.LoadInt32(&b.isClosed) == 1 {
+		return
+	}
 	if !atomic.CompareAndSwapInt32(&b.isSeekerDisabled, 0, 1) {
 		return
 	}
@@ -138,6 +153,9 @@ type bufReader struct {
 }
 
 func (b *bufReader) DisableSeeker() {
+	if atomic.LoadInt32(&b.isClosed) == 1 {
+		return
+	}
 	if !atomic.CompareAndSwapInt32(&b.isSeekerDisabled, 0, 1) {
 		return
 	}
@@ -150,6 +168,9 @@ func (b *bufReader) DisableSeeker() {
 }
 
 func (b *bufReader) Seek(offset int64, whence int) (int64, error) {
+	if atomic.LoadInt32(&b.isClosed) == 1 {
+		return b.currentPos, ErrClosed
+	}
 	if atomic.LoadInt32(&b.isSeekerDisabled) == 1 {
 		return b.currentPos, ErrSeekerDisabled
 	}
@@ -185,10 +206,10 @@ func (b *bufReader) Seek(offset int64, whence int) (int64, error) {
 	if bytesToRead > 0 {
 		n, err := b.read(bytesToRead)
 		if err != nil && !errors.Is(err, io.EOF) {
-			return b.getReaderPos(), err
+			return b.currentPos, err
 		}
 		if n < bytesToRead {
-			return b.getReaderPos(), ErrSeekerOutOfRange
+			return b.currentPos, ErrSeekerOutOfRange
 		}
 	}
 
