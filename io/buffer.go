@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"io/ioutil"
 	"sync"
 	"sync/atomic"
 )
@@ -57,7 +58,7 @@ func (b *bufferReadSeekCloserFactory) NewReader(r io.Reader) BufferReadSeekClose
 	case io.ReadCloser:
 		rc = r
 	default:
-		rc = io.NopCloser(r)
+		rc = ioutil.NopCloser(r)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
