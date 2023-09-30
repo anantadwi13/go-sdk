@@ -1,0 +1,41 @@
+name: Test and coverage
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version:
+          - 1.14
+          - stable
+    env:
+      PACKAGES: io
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Run coverage
+        run: |
+          COVERAGE=
+          WORKDIR=$PWD 
+          for p in $(echo $PACKAGES | sed "s/,/ /g") 
+          do 
+            cd "$WORKDIR/$p"
+            go test ./... -race -coverprofile=coverage.out -covermode=atomic
+            COVERAGE+="./$p/coverage.out,"
+          done
+          cd $WORKDIR
+          COVERAGE=${COVERAGE%,}
+          echo $COVERAGE
+          echo "COVERAGE=$COVERAGE" >> "$GITHUB_ENV"
+      - uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          files: ${{ env.COVERAGE }}
+          verbose: true
