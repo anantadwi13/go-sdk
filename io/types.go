@@ -22,7 +22,9 @@ type BufferReadSeekCloserFactory interface {
 }
 
 type BufferReadSeekCloser interface {
-	io.ReadSeekCloser
+	io.Reader
+	io.Seeker
+	io.Closer
 	DisableSeeker()
 }
 
