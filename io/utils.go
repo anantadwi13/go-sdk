@@ -2,7 +2,13 @@ package io
 
 import (
 	"context"
+	"io"
 	"sync"
+)
+
+var (
+	Discard   io.Writer
+	NopCloser func(r io.Reader) io.ReadCloser
 )
 
 type pool struct {
