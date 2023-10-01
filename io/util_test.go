@@ -44,16 +44,16 @@ func (p *noPool) BufferSize() int {
 	return p.bufSize
 }
 
-func (p *noPool) Put(buf []byte) {
+func (p *noPool) Put(buf *Buffer) {
 }
 
-func (p *noPool) Get(ctx context.Context) ([]byte, error) {
-	return make([]byte, p.bufSize), nil
+func (p *noPool) Get(ctx context.Context) (*Buffer, error) {
+	return NewBuffer(p, make([]byte, p.bufSize)), nil
 }
 
 type testPool struct {
-	bufSize int
-	diff    int32
+	diff int32
+	p    Pool
 }
 
 func (t *testPool) Diff() int32 {
@@ -61,14 +61,20 @@ func (t *testPool) Diff() int32 {
 }
 
 func (t *testPool) BufferSize() int {
-	return t.bufSize
+	return t.p.BufferSize()
 }
 
-func (t *testPool) Put(buf []byte) {
+func (t *testPool) Put(buf *Buffer) {
 	atomic.AddInt32(&t.diff, -1)
+	t.p.Put(buf)
 }
 
-func (t *testPool) Get(ctx context.Context) ([]byte, error) {
+func (t *testPool) Get(ctx context.Context) (*Buffer, error) {
 	atomic.AddInt32(&t.diff, 1)
-	return make([]byte, 0, t.bufSize), nil
+	buf, err := t.p.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+	buf.pool = t
+	return buf, nil
 }

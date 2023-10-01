@@ -29,8 +29,26 @@ type BufferReadSeekCloser interface {
 	DisableSeeker()
 }
 
+type Buffer struct {
+	pool   Pool
+	buffer []byte
+}
+
+func NewBuffer(pool Pool, buf []byte) *Buffer {
+	buf = buf[:cap(buf)]
+	return &Buffer{
+		pool:   pool,
+		buffer: buf,
+	}
+}
+
+func (b *Buffer) cleanUp() {
+	b.buffer = b.buffer[:cap(b.buffer)]
+	b.pool.Put(b)
+}
+
 type Pool interface {
 	BufferSize() int
-	Put(buf []byte)
-	Get(ctx context.Context) ([]byte, error)
+	Put(buf *Buffer)
+	Get(ctx context.Context) (*Buffer, error)
 }

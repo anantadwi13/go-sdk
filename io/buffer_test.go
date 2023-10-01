@@ -147,7 +147,7 @@ func TestReaderVariant(t *testing.T) {
 }
 
 func TestFlowNormalRead(t *testing.T) {
-	tp := &testPool{bufSize: 5}
+	tp := &testPool{p: newPool(5)}
 	bf := NewBufferReadSeekCloserFactory(OptionWithPool(tp))
 	assert.EqualValues(t, 5, bf.BufferSize())
 
@@ -211,7 +211,7 @@ func TestFlowNormalRead(t *testing.T) {
 }
 
 func TestFlowReadSeek(t *testing.T) {
-	tp := &testPool{bufSize: 5}
+	tp := &testPool{p: newPool(5)}
 	bf := NewBufferReadSeekCloserFactory(OptionWithPool(tp))
 	assert.EqualValues(t, 5, bf.BufferSize())
 
@@ -327,7 +327,7 @@ func TestFlowReadSeek(t *testing.T) {
 }
 
 func TestFlowReadSeekOutOfRange(t *testing.T) {
-	tp := &testPool{bufSize: 5}
+	tp := &testPool{p: newPool(5)}
 	bf := NewBufferReadSeekCloserFactory(OptionWithPool(tp))
 	assert.EqualValues(t, 5, bf.BufferSize())
 
@@ -362,7 +362,7 @@ func TestFlowReadSeekOutOfRange(t *testing.T) {
 }
 
 func TestFlowReadSeekDisableSeeker(t *testing.T) {
-	tp := &testPool{bufSize: 5}
+	tp := &testPool{p: newPool(5)}
 	bf := NewBufferReadSeekCloserFactory(OptionWithPool(tp))
 	assert.EqualValues(t, 5, bf.BufferSize())
 
@@ -418,7 +418,7 @@ func TestFlowReadSeekDisableSeeker(t *testing.T) {
 }
 
 func TestFlowWithBufferNotFullyFilled(t *testing.T) {
-	tp := &testPool{bufSize: 5}
+	tp := &testPool{p: newPool(5)}
 	bf := NewBufferReadSeekCloserFactory(OptionWithPool(tp))
 	assert.EqualValues(t, 5, bf.BufferSize())
 
