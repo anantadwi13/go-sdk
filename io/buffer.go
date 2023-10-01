@@ -147,7 +147,7 @@ type bufReader struct {
 	isClosed         int32
 	isEofReached     bool
 	reader           io.ReadCloser
-	buffer           [][]byte
+	buffer           []*Buffer
 
 	currentPos int64
 }
@@ -282,7 +282,7 @@ func (b *bufReader) readTo(p []byte) (n int, err error) {
 		buf := b.buffer[b.currentPos/int64(b.pool.BufferSize())]
 		currentPos := int(b.currentPos % int64(b.pool.BufferSize()))
 
-		read := copy(p[n:], buf[currentPos:])
+		read := copy(p[n:], buf.buffer[currentPos:])
 		n += read
 		b.currentPos += int64(read)
 	}
@@ -308,12 +308,12 @@ func (b *bufReader) read(n int64) (bytesRead int64, err error) {
 			return
 		}
 
-		var buf []byte
+		var buf *Buffer
 
 		if len(b.buffer) != 0 {
 			buf = b.buffer[len(b.buffer)-1]
 		}
-		if buf == nil || len(buf) == cap(buf) {
+		if buf == nil || len(buf.buffer) == cap(buf.buffer) {
 			buf, err = b.pool.Get(b.ctx)
 			if err != nil {
 				if errors.Is(err, context.Canceled) {
@@ -322,14 +322,14 @@ func (b *bufReader) read(n int64) (bytesRead int64, err error) {
 				return
 			}
 
-			buf = buf[:0]
+			buf.buffer = buf.buffer[:0]
 			b.buffer = append(b.buffer, buf)
 		}
 
 		var tmpN int
-		tmpN, err = b.reader.Read(buf[len(buf):cap(buf)])
+		tmpN, err = b.reader.Read(buf.buffer[len(buf.buffer):cap(buf.buffer)])
 		if tmpN > 0 {
-			b.buffer[len(b.buffer)-1] = b.buffer[len(b.buffer)-1][:len(buf)+tmpN]
+			buf.buffer = buf.buffer[:len(buf.buffer)+tmpN]
 			bytesRead += int64(tmpN)
 		}
 	}
@@ -342,7 +342,7 @@ func (b *bufReader) getReaderPos() int64 {
 		return 0
 	}
 
-	return int64(l-1)*int64(b.pool.BufferSize()) + int64(len(b.buffer[l-1]))
+	return int64(l-1)*int64(b.pool.BufferSize()) + int64(len(b.buffer[l-1].buffer))
 }
 
 func (b *bufReader) cleanUpBuffer(all bool) {
@@ -356,7 +356,7 @@ func (b *bufReader) cleanUpBuffer(all bool) {
 		if b.buffer[i] == nil {
 			continue
 		}
-		b.pool.Put(b.buffer[i])
+		b.buffer[i].cleanUp()
 		b.buffer[i] = nil
 	}
 	b.buffer = nil
