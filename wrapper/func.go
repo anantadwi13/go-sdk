@@ -170,6 +170,12 @@ func (m *funcManager) Shutdown(ctx context.Context) error {
 }
 
 func (m *funcManager) run(ctx context.Context, fn HandleFunc, opts ...Option) {
+	if fn == nil {
+		return
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -184,10 +190,16 @@ func (m *funcManager) run(ctx context.Context, fn HandleFunc, opts ...Option) {
 	}()
 
 	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
 		opt(wrapperData)
 	}
 
 	for i := len(m.middlewares) - 1; i >= 0; i-- {
+		if m.middlewares[i] == nil {
+			continue
+		}
 		fn = m.middlewares[i](fn)
 	}
 

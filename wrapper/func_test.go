@@ -135,6 +135,36 @@ func TestFlow2(t *testing.T) {
 	}
 }
 
+func TestValidation(t *testing.T) {
+	checker := int32(4)
+	wg := sync.WaitGroup{}
+	m := NewFuncManager(nil)
+	m.Run(context.Background(), nil)
+	m.RunAsync(context.Background(), nil)
+	m.Run(nil, func(ctx context.Context, wrapperData *Data) {
+		atomic.AddInt32(&checker, -1)
+	})
+	wg.Add(1)
+	m.RunAsync(nil, func(ctx context.Context, wrapperData *Data) {
+		defer wg.Done()
+		atomic.AddInt32(&checker, -1)
+	})
+	m.Run(nil, func(ctx context.Context, wrapperData *Data) {
+		atomic.AddInt32(&checker, -1)
+	}, nil)
+	wg.Add(1)
+	m.RunAsync(nil, func(ctx context.Context, wrapperData *Data) {
+		defer wg.Done()
+		atomic.AddInt32(&checker, -1)
+	}, nil)
+
+	wg.Wait()
+
+	if checker != 0 {
+		t.Errorf("invalid checker, checker is not 0. checker: %d", checker)
+	}
+}
+
 func TestData(t *testing.T) {
 	checker := int32(6)
 	data := &Data{}
