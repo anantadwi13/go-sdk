@@ -89,6 +89,18 @@ func TestReaderVariant(t *testing.T) {
 			reader:       bytes.NewReader([]byte("1234567")),
 			readerLength: 7,
 		},
+		{
+			name: "wrapped BRSC",
+			reader: func() io.Reader {
+				reader := NewBufferReadSeekCloserFactory().NewReader(bytes.NewReader([]byte("1234567890")))
+				n, err := reader.Seek(5, io.SeekStart)
+				assert.NoError(t, err)
+				assert.EqualValues(t, 5, n)
+				reader.DisableSeeker()
+				return reader
+			}(),
+			readerLength: 5,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

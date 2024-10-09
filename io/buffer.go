@@ -52,6 +52,8 @@ func NewBufferReadSeekCloserFactory(options ...OptionBufferReadSeekCloserFactory
 func (b *bufferReadSeekCloserFactory) NewReader(r io.Reader) BufferReadSeekCloser {
 	var rc io.ReadCloser
 	switch r := r.(type) {
+	case BufferReadSeekCloser:
+		rc = r
 	case io.ReadSeeker:
 		return &bufReadSeeker{readSeeker: r}
 	case io.ReadCloser:
